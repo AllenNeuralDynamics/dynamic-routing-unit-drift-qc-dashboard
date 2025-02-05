@@ -21,8 +21,6 @@ RASTER_DIR = SCRATCH_DIR / f"unit-rasters/{CACHE_VERSION}/fig3c"
 TABLE_NAME = "from_app"
 DB_PATH = "//allen/programs/mindscope/workgroups/dynamicrouting/ben/unit_drift.parquet"
 
-logger.error(f"Startup: {uuid.uuid4()}")
-
 class UnitDriftRating(IntEnum):
     NO = 0
     YES = 1
@@ -318,73 +316,97 @@ undo_button = pn.widgets.Button(name="Previous", width=BUTTON_WIDTH)
 undo_button.disabled = True
 undo_button.on_click(lambda event: next_unit(override_next_unit_id=previous_unit_id))
 # - ---------------------------------------------------------------- #
-# from https://github.com/holoviz/panel/issues/3193#issuecomment-1757021020
-script = (
+# from https://github.com/holoviz/panel/issues/3193#issuecomment-2357189979
+from typing import TypedDict, NotRequired
+
+# Note: this uses TypedDict instead of Pydantic or dataclass because Bokeh/Panel doesn't seem to
+# like serializing custom classes to the frontend (and I can't figure out how to customize that).
+class KeyboardShortcut(TypedDict):
+    name: str
+    key: str
+    altKey: NotRequired[bool]
+    ctrlKey: NotRequired[bool]
+    metaKey: NotRequired[bool]
+    shiftKey: NotRequired[bool]
+
+from panel.custom import ReactComponent
+import param
+
+class KeyboardShortcuts(ReactComponent):
     """
-<script>
-function $$$(selector, rootNode=document.body) {
-    const arr = []
+    Class to install global keyboard shortcuts into a Panel app.
 
-    const traverser = node => {
-        // 1. decline all nodes that are not elements
-        if(node.nodeType !== Node.ELEMENT_NODE) {
-            return
-        }
+    Pass in shortcuts as a list of KeyboardShortcut dictionaries, and then handle shortcut events in Python
+    by calling `on_msg` on this component. The `name` field of the matching KeyboardShortcut will be sent as the `data`
+    field in the `DataEvent`.
 
-        // 2. add the node to the array, if it matches the selector
-        if(node.matches(selector)) {
-            arr.push(node)
-        }
+    Example:
+    >>> shortcuts = [
+        KeyboardShortcut(name="save", key="s", ctrlKey=True),
+        KeyboardShortcut(name="print", key="p", ctrlKey=True),
+    ]
+    >>> shortcuts_component = KeyboardShortcuts(shortcuts=shortcuts)
+    >>> def handle_shortcut(event: DataEvent):
+            if event.data == "save":
+                print("Save shortcut pressed!")
+            elif event.data == "print":
+                print("Print shortcut pressed!")
+    >>> shortcuts_component.on_msg(handle_shortcut)
+    """
 
-        // 3. loop through the children
-        const children = node.children
-        if (children.length) {
-            for(const child of children) {
-                traverser(child)
-            }
-        }
+    shortcuts = param.List(class_=dict)
 
-        // 4. check for shadow DOM, and loop through it's children
-        const shadowRoot = node.shadowRoot
-        if (shadowRoot) {
-            const shadowChildren = shadowRoot.children
-            for(const shadowChild of shadowChildren) {
-                traverser(shadowChild)
-            }
-        }
+    _esm = """
+    // Hash a shortcut into a string for use in a dictionary key (booleans / null / undefined are coerced into 1 or 0)
+    function hashShortcut({ key, altKey, ctrlKey, metaKey, shiftKey }) {
+      return `${key}.${+!!altKey}.${+!!ctrlKey}.${+!!metaKey}.${+!!shiftKey}`;
     }
 
-    traverser(rootNode)
-    return arr
-}
+    export function render({ model }) {
+      const [shortcuts] = model.useState("shortcuts");
 
-const doc = window.parent.document;
-buttons = Array.from($$$('button[type=button]'));
-const yes_button = buttons.find(el => el.innerText === 'yes_button_text');
-const no_button = buttons.find(el => el.innerText === 'no_button_text');
-const unsure_button = buttons.find(el => el.innerText === 'unsure_button_text');
-doc.addEventListener('keydown', function(e) {
-    switch (e.key) {
-        case "1":
-            yes_button.click();
-            break;
-        case "0":
-            no_button.click();
-            break;
-        case "5":
-            unsure_button.click();
-            break;
+      const keyedShortcuts = {};
+      for (const shortcut of shortcuts) {
+        keyedShortcuts[hashShortcut(shortcut)] = shortcut.name;
+      }
+
+      function onKeyDown(e) {
+        const name = keyedShortcuts[hashShortcut(e)];
+        if (name) {
+          e.preventDefault();
+          e.stopPropagation();
+          model.send_msg(name);
+          return;
+        }
+      }
+
+      React.useEffect(() => {
+        window.addEventListener('keydown', onKeyDown);
+        return () => {
+          window.removeEventListener('keydown', onKeyDown);
+        };
+      });
+
+      return <></>;
     }
-});
-</script>
-""".replace(
-        "yes_button_text", yes_button_text
-    )
-    .replace("no_button_text", no_button_text)
-    .replace("unsure_button_text", unsure_button_text)
-)
-
-keybinding_html = pn.pane.HTML(script)
+    """
+shortcuts = [
+    KeyboardShortcut(name="skip", key="s", ctrlKey=False),
+    KeyboardShortcut(name="previous", key="p", ctrlKey=False),
+] + [
+    KeyboardShortcut(name=k, key=str(v), ctrlKey=False) for k, v in UnitDriftRating.__members__.items()
+]
+shortcuts_component = KeyboardShortcuts(shortcuts=shortcuts)
+def handle_shortcut(event):
+        if event.data == "skip":
+            next_unit()
+        elif event.data == "previous":
+            next_unit(override_next_unit_id=previous_unit_id)
+        else:
+            update_and_next(
+                unit_id=current_unit_id, drift_rating=UnitDriftRating[event.data]
+            )
+shortcuts_component.on_msg(handle_shortcut)
 
 # - ---------------------------------------------------------------- #
 
@@ -439,20 +461,19 @@ def app():
         unit_metrics_pane,
         pn.layout.Divider(margin=(20, 0, 15, 0)),
         pn.pane.Markdown("""**Does the unit's activity drift in or out?**"""),
-        keybinding_html,
         no_button,
         yes_button,
         unsure_button,
         unit_rating_pane,
         undo_button,
         skip_button,
+        shortcuts_component,
         pn.layout.Divider(margin=(20, 0, 15, 0)),
         pn.pane.Markdown("### Filter units"),
         drift_rating_filter_radio,
         unit_id_filter_text,
         session_id_filter_text,
     )
-    logger.error(f"app() {uuid.uuid4()}")
 
     return pn.template.MaterialTemplate(
         site="DR dashboard",
