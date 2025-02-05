@@ -1,146 +1,197 @@
+import datetime
 import logging
 import random
 import time
+from enum import IntEnum
+import uuid
+
 import panel as pn
 import polars as pl
-import itertools
 import upath
-import sqlite3
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)  #! doesn't take effect
 
-CACHE_VERSION = 'v0.0.261'
-SCRATCH_DIR = upath.UPath(f's3://aind-scratch-data/dynamic-routing')
-RASTER_DIR = SCRATCH_DIR / f'unit-rasters/{CACHE_VERSION}/fig3c'
+# pn.config.theme = 'dark'
 
-TABLE_NAME = 'from_app'
-DB_PATH = 'unit_drift.parquet'
+CACHE_VERSION = "v0.0.261"
+SCRATCH_DIR = upath.UPath("s3://aind-scratch-data/dynamic-routing")
+RASTER_DIR = SCRATCH_DIR / f"unit-rasters/{CACHE_VERSION}/fig3c"
+
+TABLE_NAME = "from_app"
+DB_PATH = "//allen/programs/mindscope/workgroups/dynamicrouting/ben/unit_drift.parquet"
+
+logger.error(f"Startup: {uuid.uuid4()}")
+
+class UnitDriftRating(IntEnum):
+    NO = 0
+    YES = 1
+    UNSURE = 5
+
 
 units_df = (
-    pl.scan_parquet(f'{SCRATCH_DIR}/cache/nwb_components/{CACHE_VERSION}/consolidated/units.parquet')
-    .select([
-        'unit_id',
-        'presence_ratio',
-        'default_qc',
-        'drift_ptp',
-    ])
+    pl.scan_parquet(
+        f"{SCRATCH_DIR}/cache/nwb_components/{CACHE_VERSION}/consolidated/units.parquet"
+    ).select(
+        [
+            "unit_id",
+            "structure",
+            "default_qc",
+            "presence_ratio",
+            "drift_ptp",
+        ]
+    )
 ).collect()
 
-def create_db(save_path: str = DB_PATH, overwrite: bool = False, with_paths=True) -> None:
+
+def create_db(
+    save_path: str = DB_PATH, overwrite: bool = False, with_paths=True
+) -> None:
     if upath.UPath(save_path).exists() and not overwrite:
-        raise FileExistsError(f'{save_path} already exists: set overwrite=True to overwrite')
-    df = (
-        units_df
-        .select('unit_id')
-        .with_columns(
-            session_id=pl.col('unit_id').str.split('_').list.slice(0, 2).list.join('_'),
-            drift_rating=pl.lit(None),
-            checked_timestamp=pl.lit(None),
+        raise FileExistsError(
+            f"{save_path} already exists: set overwrite=True to overwrite"
         )
+    df = units_df.select("unit_id").with_columns(
+        session_id=pl.col("unit_id").str.split("_").list.slice(0, 2).list.join("_"),
+        drift_rating=pl.lit(None),
+        checked_timestamp=pl.lit(None),
     )
     if with_paths:
-        logger.warning('getting paths from S3 for all available units')
-        paths = tuple(RASTER_DIR.rglob('*'))
-        paths_df = pl.DataFrame({
-            'unit_id': [p.stem.split('fig3c_')[1] for p in paths if 'fig3c_' in str(p)],
-            'path': [str(p) for p in paths if 'fig3c_' in str(p)],
-        })
-        df = df.join(paths_df, on='unit_id', how='left')
+        logger.warning("getting paths from S3 for all available units")
+        paths = tuple(RASTER_DIR.rglob("*"))
+        paths_df = pl.DataFrame(
+            {
+                "unit_id": [
+                    p.stem.split("fig3c_")[1] for p in paths if "fig3c_" in str(p)
+                ],
+                "path": [str(p) for p in paths if "fig3c_" in str(p)],
+            }
+        )
+        df = df.join(paths_df, on="unit_id", how="left")
     else:
         df = df.with_columns(path=pl.lit(None))
     df.write_parquet(save_path)
     return
-    conn = sqlite3.connect(save_path)
-    df.write_database(
-        table_name=TABLE_NAME, 
-        connection=f'sqlite:///{save_path}', 
-        if_table_exists='replace' if overwrite else 'fail',
-        engine='adbc',
-    )
-    conn.close()
-    
+
+
+def reset_db(src_path: str, dest_path: str) -> None:
+    pl.read_parquet(src_path).with_columns(
+        drift_rating=pl.lit(None), checked_timestamp=pl.lit(None)
+    ).write_parquet(dest_path)
+
+
 def get_df(
-    already_checked: bool | None = False,
+    already_checked: bool | None = None,
     unit_id_filter: str | None = None,
+    session_id_filter: str | None = None,
     drift_rating_filter: int | None = None,
     with_paths: bool | None = True,
-    db_path=DB_PATH,    
+    db_path=DB_PATH,
 ) -> pl.DataFrame:
     filter_exprs = []
     if with_paths is True:
-        filter_exprs.append(pl.col('path').is_not_null())
-    else:
-        filter_exprs.append(pl.col('path').is_null())
-    if already_checked:
-        filter_exprs.append(pl.col('drift_rating').is_not_null())
-    elif already_checked is False:
-        filter_exprs.append(pl.col('drift_rating').is_null())
+        filter_exprs.append(pl.col("path").is_not_null())
+    elif with_paths is False:
+        filter_exprs.append(pl.col("path").is_null())
+    if already_checked is True and drift_rating_filter is None:
+        filter_exprs.append(pl.col("drift_rating").is_not_null())
+    elif already_checked is False and drift_rating_filter is None:
+        filter_exprs.append(pl.col("drift_rating").is_null())
+    if session_id_filter:
+        filter_exprs.append(pl.col("session_id").str.starts_with(session_id_filter))
     if unit_id_filter:
-        filter_exprs.append(pl.col('unit_id').str.starts_with(unit_id_filter))
+        filter_exprs.append(pl.col("unit_id") == unit_id_filter)
     if drift_rating_filter is not None:
-        filter_exprs.append(pl.col('drift_rating') == drift_rating_filter)
+        filter_exprs.append(pl.col("drift_rating") == int(drift_rating_filter))
     if filter_exprs:
-        logger.debug(f"Filtering units df with {' & '.join([str(f) for f in filter_exprs])}")
+        logger.info(
+            f"Filtering units df with {' & '.join([str(f) for f in filter_exprs])}"
+        )
     return pl.read_parquet(db_path).filter(*filter_exprs)
-    return pl.read_database(
-            query=f'SELECT * FROM {TABLE_NAME}', 
-            connection=sqlite3.connect(db_path),
-        ).filter(*filter_exprs)
+
 
 def unit_generator(
-    **get_df_kwargs
+    already_checked: bool | None = False,
+    unit_id_filter: str | None = None,
+    session_id_filter: str | None = None,
+    drift_rating_filter: int | None = None,
+    with_paths: bool | None = True,
+    db_path=DB_PATH,
 ):
     while True:
-        df = get_df(**get_df_kwargs)
-        session_ids = df['session_id'].unique().to_list()
+        df = get_df(
+            already_checked=already_checked,
+            unit_id_filter=unit_id_filter,
+            session_id_filter=session_id_filter,
+            drift_rating_filter=drift_rating_filter,
+            with_paths=with_paths,
+            db_path=db_path,
+        )
+        session_ids = df["session_id"].unique().to_list()
         if not session_ids:
-            raise StopIteration('No more sessions to check')
+            raise StopIteration("No more sessions to check")
         random.shuffle(session_ids)
         for session_id in session_ids:
-            sub_df = df.filter(pl.col('session_id') == session_id)
+            sub_df = df.filter(pl.col("session_id") == session_id)
             if sub_df.is_empty():
-                logger.info(f'No more units to check for {session_id}')
+                logger.info(f"No more units to check for {session_id}")
                 continue
-            yield sub_df.sample(1)['unit_id'].first()
+            yield sub_df.sample(1)["unit_id"].first()
 
-def update_row(unit_id: str, drift_rating: int, db_path=DB_PATH) -> None:
+
+def update_db(unit_id: str, drift_rating: int, db_path=DB_PATH) -> None:
     timestamp = int(time.time())
-    session_id = '_'.join(unit_id.split('_')[:2])
+    session_id = "_".join(unit_id.split("_")[:2])
     original_df = get_df()
-    unit_id_filter = pl.col('unit_id') == unit_id
-    logger.info(f'Updating row for {unit_id} with drift_rating={drift_rating}')
-    df = (
-        original_df
-        .with_columns(
-            drift_rating=pl.when(unit_id_filter).then(pl.lit(drift_rating)).otherwise(pl.col('drift_rating')),
-            checked_timestamp=pl.when(unit_id_filter).then(pl.lit(timestamp)).otherwise(pl.col('checked_timestamp')),
-            session_id=pl.when(unit_id_filter).then(pl.lit(session_id)).otherwise(pl.col('session_id')),
-        )
+    unit_id_filter = pl.col("unit_id") == unit_id
+    logger.info(f"Updating row for {unit_id} with drift_rating={drift_rating}")
+    df = original_df.with_columns(
+        drift_rating=pl.when(unit_id_filter)
+        .then(pl.lit(drift_rating))
+        .otherwise(pl.col("drift_rating")),
+        checked_timestamp=pl.when(unit_id_filter)
+        .then(pl.lit(timestamp))
+        .otherwise(pl.col("checked_timestamp")),
+        session_id=pl.when(unit_id_filter)
+        .then(pl.lit(session_id))
+        .otherwise(pl.col("session_id")),
     )
-    assert len(df) == len(original_df), f'Row count changed: {len(original_df)} -> {len(df)}'
+    assert len(df) == len(
+        original_df
+    ), f"Row count changed: {len(original_df)} -> {len(df)}"
     df.write_parquet(db_path)
-    logger.info(f'Overwrote {db_path}')
+    logger.info(f"Overwrote {db_path}")
+
 
 def test_db(with_paths=False):
-    db_path = 'test.parquet'
+    db_path = "test.parquet"
     create_db(overwrite=True, save_path=db_path, with_paths=with_paths)
     i = next(unit_generator(db_path=db_path))
-    update_row(i, 2, db_path=db_path)
+    update_db(i, 2, db_path=db_path)
     df = get_df(unit_id_filter=i, already_checked=True, db_path=db_path)
-    assert len(df) == 1, f'Expected 1 row, got {len(df)}'
+    assert len(df) == 1, f"Expected 1 row, got {len(df)}"
     upath.UPath(db_path).unlink()
-    
+
+
 def get_raster(unit_id: str) -> bytes:
-    path: str = get_df(unit_id_filter=unit_id)['path'].first()
-    logger.debug(f'Getting raster image data from {path}')
+    filtered_df = get_df(unit_id_filter=unit_id, with_paths=True)
+    if len(filtered_df) > 1:
+        import pdb
+
+        pdb.set_trace()
+    assert len(filtered_df) == 1, "df filtering likely incorrect"
+    path: str = filtered_df["path"].first()
+    assert path is not None, f"Path not stored for {unit_id}"
+    logger.info(f"Getting raster image data from {path}")
     t0 = time.time()
     b = upath.UPath(path).read_bytes()
-    logger.debug(f'Got raster image data in {time.time() - t0:.2f}s')
-    return b 
+    logger.info(f"Got raster image data in {time.time() - t0:.2f}s")
+    return b
+
 
 def get_metrics(unit_id: str):
-    return units_df.filter(pl.col('unit_id') == unit_id).to_dicts()[0]
+    return units_df.filter(pl.col("unit_id") == unit_id).to_dicts()[0]
+
 
 def display_metrics(
     unit_id=str,
@@ -151,83 +202,244 @@ def display_metrics(
 ### `{unit_id}`
 """
     for k, v in metrics.items():
-        if k not in ('presence_ratio', 'default_qc', 'drift_ptp'):
+        if k not in ("structure", "presence_ratio", "default_qc", "drift_ptp"):
             continue
         stats += f"\n{k.replace('_', ' ')}:\n`{v if v else '-'}`\n"
     return pn.pane.Markdown(stats)
 
-def display_image(unit_id: str):
-    return pn.pane.PNG(get_raster(unit_id), sizing_mode="stretch_height",)
 
-unit_id_generator = unit_generator()
+def display_rating(
+    unit_id=str,
+) -> pn.pane.Markdown:
+    df = get_df(unit_id_filter=unit_id)
+    assert len(df) == 1, f"Expected 1 row, got {len(df)}"
+    row = df.to_dicts()[0]
+    rating: int | None = row["drift_rating"]
+    if rating is None:
+        return pn.pane.Markdown("not yet rated")
+    else:
+        return pn.pane.Markdown(
+            f"**{UnitDriftRating(rating).name.title()}** ({datetime.datetime.fromtimestamp(row['checked_timestamp']).strftime('%Y-%m-%d %H:%M:%S')})"
+        )
+
+
+def display_image(unit_id: str):
+    return pn.pane.PNG(
+        get_raster(unit_id),
+        sizing_mode="stretch_height",
+    )
+
+
+unit_generator_params = dict(
+    already_checked=False,
+    with_paths=True,
+    unit_id_filter=None,
+    drift_rating_filter=None,
+)
+unit_id_generator = unit_generator(**unit_generator_params)
 current_unit_id = next(unit_id_generator)
-unit_id_pane = display_metrics(current_unit_id)
+previous_unit_id: str | None = None
+unit_metrics_pane = display_metrics(current_unit_id)
+unit_rating_pane = display_rating(current_unit_id)
 raster_image_pane = display_image(current_unit_id)
 
-def update_unit_id(event):
-    global current_unit_id
-    current_unit_id = next(unit_id_generator)
+
+def update_and_next(unit_id: str, drift_rating: int) -> None:
+    update_db(unit_id=unit_id, drift_rating=drift_rating)
+    next_unit()
+
+
+def next_unit(override_next_unit_id: str | None = None) -> None:
+    global current_unit_id, previous_unit_id
+    if override_next_unit_id:
+        current_unit_id = override_next_unit_id
+        undo_button.disabled = True
+    else:
+        previous_unit_id = current_unit_id
+        undo_button.disabled = False
+        current_unit_id = next(unit_id_generator)
     raster_image_pane.object = display_image(current_unit_id).object
-    unit_id_pane.object = display_metrics(current_unit_id).object
-    
-button = pn.widgets.Button(name='Click to get new unit', width=190)
-button.on_click(update_unit_id)
+    unit_metrics_pane.object = display_metrics(current_unit_id).object
+    unit_rating_pane.object = display_rating(current_unit_id).object
 
 
-# # JavaScript to trigger button click on spacebar press
-# def trigger_spacebar_click():
-#     js_code = """
-#     document.addEventListener('keydown', function(event) {
-#         if (event.code === 'Space') {
-#             document.querySelector('button').click();
-#         }
-#     });
-#     """
-#     pn.state.execute(lambda: pn.state.curdoc().add_root(pn.pane.HTML(f'<script>{js_code}</script>')))
+SIDEBAR_WIDTH = 230
+BUTTON_WIDTH = int(SIDEBAR_WIDTH * 0.8)
 
-# pn.state.onload(trigger_spacebar_click)
+# make three buttons for rating drift, which all call update_unit_id
+# 0: no, 1: yes, 2: unsure
+no_button_text = f"{UnitDriftRating.NO.value}: {UnitDriftRating.NO.name.lower()}"
+no_button = pn.widgets.Button(name=no_button_text, width=BUTTON_WIDTH)
+no_button.on_click(
+    lambda event: update_and_next(
+        unit_id=current_unit_id, drift_rating=UnitDriftRating.NO
+    )
+)
+yes_button_text = f"{UnitDriftRating.YES.value}: {UnitDriftRating.YES.name.lower()}"
+yes_button = pn.widgets.Button(name=yes_button_text, width=BUTTON_WIDTH)
+yes_button.on_click(
+    lambda event: update_and_next(
+        unit_id=current_unit_id, drift_rating=UnitDriftRating.YES
+    )
+)
+unsure_button_text = (
+    f"{UnitDriftRating.UNSURE.value}: {UnitDriftRating.UNSURE.name.lower()}"
+)
+unsure_button = pn.widgets.Button(name=unsure_button_text, width=BUTTON_WIDTH)
+unsure_button.on_click(
+    lambda event: update_and_next(
+        unit_id=current_unit_id, drift_rating=UnitDriftRating.UNSURE
+    )
+)
+skip_button = pn.widgets.Button(name="Skip", width=BUTTON_WIDTH)
+skip_button.on_click(lambda event: next_unit())
+undo_button = pn.widgets.Button(name="Previous", width=BUTTON_WIDTH)
+undo_button.disabled = True
+undo_button.on_click(lambda event: next_unit(override_next_unit_id=previous_unit_id))
+# - ---------------------------------------------------------------- #
+# from https://github.com/holoviz/panel/issues/3193#issuecomment-1757021020
+script = (
+    """
+<script>
+function $$$(selector, rootNode=document.body) {
+    const arr = []
 
-# pn.extension()
-# pn.Column(button, unit_id_pane, raster_image_pane).servable()
+    const traverser = node => {
+        // 1. decline all nodes that are not elements
+        if(node.nodeType !== Node.ELEMENT_NODE) {
+            return
+        }
+
+        // 2. add the node to the array, if it matches the selector
+        if(node.matches(selector)) {
+            arr.push(node)
+        }
+
+        // 3. loop through the children
+        const children = node.children
+        if (children.length) {
+            for(const child of children) {
+                traverser(child)
+            }
+        }
+
+        // 4. check for shadow DOM, and loop through it's children
+        const shadowRoot = node.shadowRoot
+        if (shadowRoot) {
+            const shadowChildren = shadowRoot.children
+            for(const shadowChild of shadowChildren) {
+                traverser(shadowChild)
+            }
+        }
+    }
+
+    traverser(rootNode)
+    return arr
+}
+
+const doc = window.parent.document;
+buttons = Array.from($$$('button[type=button]'));
+const yes_button = buttons.find(el => el.innerText === 'yes_button_text');
+const no_button = buttons.find(el => el.innerText === 'no_button_text');
+const unsure_button = buttons.find(el => el.innerText === 'unsure_button_text');
+doc.addEventListener('keydown', function(e) {
+    switch (e.key) {
+        case "1":
+            yes_button.click();
+            break;
+        case "0":
+            no_button.click();
+            break;
+        case "5":
+            unsure_button.click();
+            break;
+    }
+});
+</script>
+""".replace(
+        "yes_button_text", yes_button_text
+    )
+    .replace("no_button_text", no_button_text)
+    .replace("unsure_button_text", unsure_button_text)
+)
+
+keybinding_html = pn.pane.HTML(script)
+
+# - ---------------------------------------------------------------- #
+
+unit_generator_params = dict(
+    already_checked=False,
+    with_paths=True,
+    unit_id_filter=None,
+    session_id_filter=None,
+    drift_rating_filter=None,
+)
+
+
+def update_unit_generator(event) -> None:
+    global unit_id_generator
+    unit_generator_params = dict(
+        unit_id_filter=unit_id_filter_text.value or None,
+        session_id_filter=session_id_filter_text.value or None,
+        with_paths=True,
+    )
+    if drift_rating_filter_radio.value == "unrated":
+        unit_generator_params["already_checked"] = False
+    else:
+        unit_generator_params["drift_rating_filter"] = UnitDriftRating[
+            drift_rating_filter_radio.value.upper()
+        ].value
+    logger.info(f"Updating unit generator with {unit_generator_params}")
+    unit_id_generator = unit_generator(**unit_generator_params)
+    next_unit()
+
+
+unit_id_filter_text = pn.widgets.TextInput(
+    name="Unit ID filter", value="", placeholder="Matches exact ID", width=BUTTON_WIDTH
+)
+unit_id_filter_text.param.watch(update_unit_generator, "value")
+session_id_filter_text = pn.widgets.TextInput(
+    name="Session ID filter",
+    value="",
+    placeholder="Matches using 'startswith'",
+    width=BUTTON_WIDTH,
+)
+session_id_filter_text.param.watch(update_unit_generator, "value")
+drift_rating_filter_radio = pn.widgets.RadioBoxGroup(
+    name="Show rated units",
+    options=["unrated"] + [k.lower() for k in UnitDriftRating.__members__],
+    inline=False,
+)
+drift_rating_filter_radio.param.watch(update_unit_generator, "value")
+
 
 def app():
-    width = 150
-    # unit_id = next(unit_generator())
-#     subject_id = pn.widgets.TextInput(name="Subject ID(s)", value="", placeholder="comma separated", width=width)
-#     specific_date = pn.widgets.TextInput(name="Specific date", value="", width=width)
-#     start_date = pn.widgets.TextInput(name="Start date", value="", width=width)
-#     end_date = pn.widgets.TextInput(name="End date", value="", width=width)
-#     usage_info = pn.pane.Alert(
-#         """
-#         Press spacebar to get a new unit to check.
-#         Hit 0, 1 or 2 to rate if the unit drifts: 0: no, 1: yes, 2: unsure.
-#         """,
-#         alert_type='info',
-#         sizing_mode="stretch_width",
-#     )
-#     refresh_table_button = pn.widgets.Button(name="Refresh table", button_type="primary")
     sidebar = pn.Column(
-        button, unit_id_pane,
-#         subject_id,
-#         specific_date,
-#         start_date,
-#         end_date,
-#         refresh_table_button,
+        unit_metrics_pane,
+        pn.layout.Divider(margin=(20, 0, 15, 0)),
+        pn.pane.Markdown("""**Does the unit's activity drift in or out?**"""),
+        keybinding_html,
+        no_button,
+        yes_button,
+        unsure_button,
+        unit_rating_pane,
+        undo_button,
+        skip_button,
+        pn.layout.Divider(margin=(20, 0, 15, 0)),
+        pn.pane.Markdown("### Filter units"),
+        drift_rating_filter_radio,
+        unit_id_filter_text,
+        session_id_filter_text,
     )
-#     # add on click event to refresh table
-#     def refresh_table(event):
-#         v = subject_id.value
-#         subject_id.value = ''
-#         subject_id.value = v
-#     refresh_table_button.on_click(refresh_table)
-        
-#     bound_get_session_df = pn.bind(get_sessions_table, subject_id, specific_date, start_date, end_date)
+    logger.error(f"app() {uuid.uuid4()}")
+
     return pn.template.MaterialTemplate(
         site="DR dashboard",
-        title='unit-raster-qc',
+        title="unit drift qc",
         sidebar=[sidebar],
         main=[raster_image_pane],
-        sidebar_width=220,
+        sidebar_width=SIDEBAR_WIDTH,
     )
+
 
 app().servable()
