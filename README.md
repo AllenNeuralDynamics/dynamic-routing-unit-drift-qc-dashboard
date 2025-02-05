@@ -1,0 +1,2 @@
+Put `app.py` in a folder of apps and run with: 
+`panel serve src/dashboard_test/apps/*.py --autoreload --address dr-dashboard.corp.alleninstitute.org --port 9000 --admin --allow-websocket-origin=* --keep-alive 1000`
