@@ -91,7 +91,6 @@ def create_db(
             f"{save_path} already exists: set overwrite=True to overwrite"
         )
     df = units_df.select("unit_id").with_columns(
-        session_id=pl.col("unit_id").str.split("_").list.slice(0, 2).list.join("_"),
         drift_rating=pl.lit(None),
         checked_timestamp=pl.lit(None),
     )
@@ -190,9 +189,6 @@ def update_db(unit_id: str, drift_rating: int, db_path=DB_PATH) -> None:
         checked_timestamp=pl.when(unit_id_filter)
         .then(pl.lit(timestamp))
         .otherwise(pl.col("checked_timestamp")),
-        session_id=pl.when(unit_id_filter)
-        .then(pl.lit(session_id))
-        .otherwise(pl.col("session_id")),
     )
     assert len(df) == len(
         original_df
