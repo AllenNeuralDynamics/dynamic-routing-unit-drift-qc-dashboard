@@ -27,8 +27,28 @@ class UnitDriftRating(IntEnum):
     NO = 0
     YES = 1
     UNSURE = 5
+    
+class Lock:
+    def __init__(self, path=DB_PATH + ".lock"):
+        self.path = upath.UPath(path)
+        
+    def acquire(self):
+        while self.path.exists():
+            time.sleep(0.01)
+        self.path.touch()
+                
+    def release(self):
+        upath.UPath(self.path).unlink()
+        
+    def __enter__(self):
+        self.acquire()
+        logger.info(f"Acquired lock at {self.path}")
+        return self
 
-
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.release()
+        logger.info(f"Released lock at {self.path}")
+    
 units_df = (
     pl.scan_parquet(
         f"{SCRATCH_DIR}/cache/nwb_components/{CACHE_VERSION}/consolidated/units.parquet"
@@ -159,7 +179,8 @@ def update_db(unit_id: str, drift_rating: int, db_path=DB_PATH) -> None:
     assert len(df) == len(
         original_df
     ), f"Row count changed: {len(original_df)} -> {len(df)}"
-    df.write_parquet(db_path)
+    with Lock():
+        df.write_parquet(db_path)
     logger.info(f"Overwrote {db_path}")
 
 
