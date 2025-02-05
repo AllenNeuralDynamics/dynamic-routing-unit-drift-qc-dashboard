@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)  #! doesn't take effect
 
 # pn.config.theme = 'dark'
+pn.config.notifications = True
 
 CACHE_VERSION = "v0.0.261"
 SCRATCH_DIR = upath.UPath("s3://aind-scratch-data/dynamic-routing")
@@ -20,6 +21,40 @@ RASTER_DIR = SCRATCH_DIR / f"unit-rasters/{CACHE_VERSION}/fig3c"
 
 TABLE_NAME = "from_app"
 DB_PATH = "//allen/programs/mindscope/workgroups/dynamicrouting/ben/unit_drift.parquet"
+
+df_path = "s3://aind-scratch-data/dynamic-routing/cache/nwb_components/{}/consolidated/{}.parquet"
+epochs_df = pl.read_parquet(df_path.format(CACHE_VERSION, "epochs"))
+units_df = (
+    pl.scan_parquet(df_path.format(CACHE_VERSION, "units"))
+    .select(
+        [
+            "session_id",
+            "unit_id",
+            "structure",
+            "default_qc",
+            "presence_ratio",
+            "drift_ptp",
+            "obs_intervals",
+        ]
+    )
+    .collect()
+    # filter out units that are only partially-observed within the task
+    .join(
+        other=(
+            epochs_df
+            .filter(
+                pl.col('script_name') == 'DynamicRouting1'
+            )
+            .select('session_id', 'stop_time', 'start_time')
+        ),
+        on='session_id',
+        how='left',
+    ).filter(
+        pl.col('obs_intervals').list.get(0).list.get(0).le(pl.col('start_time')),
+        pl.col('obs_intervals').list.get(0).list.get(1).ge(pl.col('stop_time')),
+    )
+    .drop("obs_intervals")
+)
 
 class UnitDriftRating(IntEnum):
     NO = 0
@@ -46,20 +81,6 @@ class Lock:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.release()
         logger.info(f"Released lock at {self.path}")
-    
-units_df = (
-    pl.scan_parquet(
-        f"{SCRATCH_DIR}/cache/nwb_components/{CACHE_VERSION}/consolidated/units.parquet"
-    ).select(
-        [
-            "unit_id",
-            "structure",
-            "default_qc",
-            "presence_ratio",
-            "drift_ptp",
-        ]
-    )
-).collect()
 
 
 def create_db(
@@ -90,7 +111,6 @@ def create_db(
         df = df.with_columns(path=pl.lit(None))
     df.write_parquet(save_path)
     return
-
 
 def reset_db(src_path: str, dest_path: str) -> None:
     pl.read_parquet(src_path).with_columns(
@@ -223,6 +243,8 @@ def display_metrics(
     for k, v in metrics.items():
         if k not in ("structure", "presence_ratio", "default_qc", "drift_ptp"):
             continue
+        if isinstance(v, float):
+            v = f"{v:.2f}"
         stats += f"\n{k.replace('_', ' ')}:\n`{v if v else '-'}`\n"
     return pn.pane.Markdown(stats)
 
@@ -248,7 +270,9 @@ def display_image(unit_id: str):
         sizing_mode="stretch_height",
     )
 
-
+if not upath.UPath(DB_PATH).exists():
+    create_db()
+    
 unit_generator_params = dict(
     already_checked=False,
     with_paths=True,
@@ -276,7 +300,10 @@ def next_unit(override_next_unit_id: str | None = None) -> None:
     else:
         previous_unit_id = current_unit_id
         undo_button.disabled = False
-        current_unit_id = next(unit_id_generator)
+        try:
+            current_unit_id = next(unit_id_generator)
+        except StopIteration:
+            pn.state.notifications.warning("No matching units")
     raster_image_pane.object = display_image(current_unit_id).object
     unit_metrics_pane.object = display_metrics(current_unit_id).object
     unit_rating_pane.object = display_rating(current_unit_id).object
@@ -287,14 +314,14 @@ BUTTON_WIDTH = int(SIDEBAR_WIDTH * 0.8)
 
 # make three buttons for rating drift, which all call update_unit_id
 # 0: no, 1: yes, 2: unsure
-no_button_text = f"{UnitDriftRating.NO.value}: {UnitDriftRating.NO.name.lower()}"
+no_button_text = f"{UnitDriftRating.NO.name.title()} [{UnitDriftRating.NO.value}]"
 no_button = pn.widgets.Button(name=no_button_text, width=BUTTON_WIDTH)
 no_button.on_click(
     lambda event: update_and_next(
         unit_id=current_unit_id, drift_rating=UnitDriftRating.NO
     )
 )
-yes_button_text = f"{UnitDriftRating.YES.value}: {UnitDriftRating.YES.name.lower()}"
+yes_button_text = f"{UnitDriftRating.YES.name.title()} [{UnitDriftRating.YES.value}]"
 yes_button = pn.widgets.Button(name=yes_button_text, width=BUTTON_WIDTH)
 yes_button.on_click(
     lambda event: update_and_next(
@@ -302,7 +329,7 @@ yes_button.on_click(
     )
 )
 unsure_button_text = (
-    f"{UnitDriftRating.UNSURE.value}: {UnitDriftRating.UNSURE.name.lower()}"
+    f"{UnitDriftRating.UNSURE.name.title()} [{UnitDriftRating.UNSURE.value}]"
 )
 unsure_button = pn.widgets.Button(name=unsure_button_text, width=BUTTON_WIDTH)
 unsure_button.on_click(
@@ -310,11 +337,12 @@ unsure_button.on_click(
         unit_id=current_unit_id, drift_rating=UnitDriftRating.UNSURE
     )
 )
-skip_button = pn.widgets.Button(name="Skip", width=BUTTON_WIDTH)
+skip_button = pn.widgets.Button(name="Skip [s]", width=BUTTON_WIDTH)
 skip_button.on_click(lambda event: next_unit())
-undo_button = pn.widgets.Button(name="Previous", width=BUTTON_WIDTH)
+undo_button = pn.widgets.Button(name="Previous [p]", width=BUTTON_WIDTH)
 undo_button.disabled = True
 undo_button.on_click(lambda event: next_unit(override_next_unit_id=previous_unit_id))
+
 # - ---------------------------------------------------------------- #
 # from https://github.com/holoviz/panel/issues/3193#issuecomment-2357189979
 from typing import TypedDict, NotRequired
