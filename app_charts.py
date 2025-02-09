@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)  #! doesn't take effect
 
 all_units_df = pl.read_parquet(db_utils.CACHED_DF_PATH.format(db_utils.CACHE_VERSION, "units"))
+drop_score_df = pl.read_parquet("//allen/programs/mindscope/workgroups/dynamicrouting/ben/df_qc_drop_session_time.parquet")
 unfiltered_df = (
     db_utils.get_df()
     .drop_nulls('drift_rating')
@@ -33,13 +34,23 @@ unfiltered_df = (
         on='unit_id',
         how='inner',
     )
+    .join(
+        other=drop_score_df.select('unit_id', 'time_weight', 'drop_score'),
+        on='unit_id',
+        how='left',
+    )
+    .with_columns(
+        time_weight=pl.col('time_weight').abs(),
+    )
 )
+
 QUANTILE = 0.99
 def filter_outlier_exprs() -> list[pl.Expr]:
     exprs = []
     for column in (
         'drift_ptp', 
         'amplitude_cutoff',
+        'time_weight',
     ):
         q: float | None = unfiltered_df[column].quantile(QUANTILE, interpolation='lower')
         exprs.append(
