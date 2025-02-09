@@ -126,6 +126,7 @@ def get_cum_dist_chart(df: pl.DataFrame) -> alt.Chart:
         .transform_calculate(
             metric=f'datum[{metric_param.name}]'
         )
+        .transform_filter('isValid(datum.metric)') 
         .transform_window(
             cdf="cume_dist()",
             sort=[{"field": "metric"}],
