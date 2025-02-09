@@ -259,6 +259,7 @@ def update_unit_generator(event) -> None:
         unit_id_filter=unit_id_filter_text.value or None,
         session_id_filter=session_id_filter_text.value or None,
         with_paths=True,
+        presence_ratio_filter=presence_ratio_range_slider.value,
     )
     if drift_rating_filter_radio.value == "unrated":
         unit_generator_params["already_checked"] = False
@@ -288,7 +289,15 @@ drift_rating_filter_radio = pn.widgets.RadioBoxGroup(
     inline=False,
 )
 drift_rating_filter_radio.param.watch(update_unit_generator, "value")
-
+presence_ratio_range_slider = pn.widgets.RangeSlider(
+    name="Presence ratio",
+    start=0,
+    end=1,
+    value=(0.7, 1),
+    step=0.05,
+    width=BUTTON_WIDTH,
+)
+presence_ratio_range_slider.param.watch(update_unit_generator, "value")
 
 def app():
     sidebar = pn.Column(
@@ -305,6 +314,7 @@ def app():
         pn.layout.Divider(margin=(20, 0, 15, 0)),
         pn.pane.Markdown("### Filter units"),
         drift_rating_filter_radio,
+        presence_ratio_range_slider,
         pn.pane.Markdown("""### Paste text only"""),
         pn.pane.Markdown("Keyboard shortcuts active."),
         pn.pane.Markdown("Don't type in filter box!"),
