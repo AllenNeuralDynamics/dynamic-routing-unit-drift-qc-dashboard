@@ -128,8 +128,8 @@ def get_cum_dist_chart(df: pl.DataFrame) -> alt.Chart:
         )
         .transform_window(
             cdf="cume_dist()",
-            frame=[-5, 5],
             sort=[{"field": "metric"}],
+            groupby=["drift_rating"],
         )
         .encode(
             alt.X('metric:Q', title=''),
