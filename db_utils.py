@@ -19,7 +19,7 @@ DB_PATH = "//allen/programs/mindscope/workgroups/dynamicrouting/ben/unit_drift.p
 
 CACHED_DF_PATH = "s3://aind-scratch-data/dynamic-routing/cache/nwb_components/{}/consolidated/{}.parquet"
 
-
+    
 def get_units_df() -> pl.DataFrame:
     return (
         pl.scan_parquet(CACHED_DF_PATH.format(CACHE_VERSION, "units"))
@@ -201,8 +201,18 @@ def unit_generator(
     session_id_filter: str | None = None,
     drift_rating_filter: int | None = None,
     with_paths: bool | None = True,
+    presence_ratio_filter: tuple[float, float] | None = None,
     db_path=DB_PATH,
 ):
+    if presence_ratio_filter:
+        filtered_unit_ids = (
+            pl.scan_parquet(CACHED_DF_PATH.format(CACHE_VERSION, "units")).select('unit_id', 'presence_ratio')
+            .filter(
+                pl.col("presence_ratio").ge(presence_ratio_filter[0]),
+                pl.col("presence_ratio").le(presence_ratio_filter[1]),
+            )
+            .select("unit_id")
+        ).collect()
     while True:
         df = get_df(
             already_checked=already_checked,
@@ -212,6 +222,11 @@ def unit_generator(
             with_paths=with_paths,
             db_path=db_path,
         )
+        if presence_ratio_filter:
+            original_len = len(df)
+            df = df.filter(pl.col('unit_id').is_in(filtered_unit_ids['unit_id']))
+            if presence_ratio_filter == (0, 1):
+                assert len(df) == original_len, "Default (0, 1) presence ratio filter removed rows"
         session_ids = df["session_id"].unique().to_list()
         if not session_ids:
             raise StopIteration("No more sessions to check")
