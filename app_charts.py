@@ -29,6 +29,9 @@ corr_values_df = pl.read_parquet(
 lda_df = pl.read_parquet(
     "//allen/programs/mindscope/workgroups/dynamicrouting/ben/lda.parquet"
 )
+lda_all_df = pl.read_parquet(
+    "//allen/programs/mindscope/workgroups/dynamicrouting/ben/lda_all.parquet"
+)
 anova_df = pl.read_parquet(
     "//allen/programs/mindscope/workgroups/dynamicrouting/ben/anova.parquet"
 )
