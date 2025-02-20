@@ -145,7 +145,12 @@ def get_histogram_chart(
     # alt.Chart(df.to_pandas())
     return (
         alt.Chart(
-            data=df.select(metric, "drift_rating").to_pandas(),
+            data=(
+                df
+                .select(metric, "drift_rating")
+                .sample(min(5000, len(df) - 1)) # vega limit
+                .to_pandas()
+            ),
             title=alt.Title(
                 title or "",
                 anchor="start",
@@ -180,6 +185,7 @@ def get_cum_dist_chart(df: pl.DataFrame, metric: str) -> alt.Chart:
     source = (
         df.select(metric, "drift_rating")
         .drop_nulls(metric)
+        .sample(min(5000, len(df.drop_nulls(metric)))) # vega limit
         .sort(metric)
         .with_columns(
             cdf=(pl.col(metric).cum_count() / pl.col(metric).count()).over('drift_rating'),
