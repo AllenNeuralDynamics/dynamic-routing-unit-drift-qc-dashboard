@@ -234,7 +234,7 @@ def get_cum_dist_chart(df: pl.DataFrame, metric: str) -> alt.Chart:
     return chart #+ points  + rules
 
 
-def get_roc_curve(metric: str, n_points=50) -> pl.DataFrame:
+def get_roc_curve_df(metric: str, n_points=50) -> pl.DataFrame:
     df = unfiltered_df
     YES = db_utils.UnitDriftRating.YES.name
     NO = db_utils.UnitDriftRating.NO.name
@@ -273,16 +273,6 @@ def get_roc_curve(metric: str, n_points=50) -> pl.DataFrame:
         tpr=pl.col("tp") / (pl.col("tp") + pl.col("fn")),
         metric=pl.lit(metric),
     )
-
-
-def create_roc_df(roc_df_path: str = ROC_DF_PATH) -> pl.DataFrame:
-    t0 = time.time()
-    roc_df = pl.concat(get_roc_curve(metric) for metric in metric_columns)
-    logger.info(f"roc_df created in {time.time() - t0:.2f}s")
-    roc_df.write_parquet(roc_df_path)
-    logger.info(f"roc_df written to {roc_df_path}")
-    return roc_df
-
 
 def get_area_under_roc_curve(roc_df: pl.DataFrame) -> float:
     roc_df = roc_df.sort("fpr")
@@ -401,7 +391,7 @@ timeline = pn.pane.Vega(
 
 # roc_chart = get_roc_chart(pl.read_parquet(ROC_DF_PATH))
 def get_roc_chart_pn(metric: str) -> alt.Chart:
-    roc_df = get_roc_curve(metric)
+    roc_df = get_roc_curve_df(metric)
     return get_roc_chart(roc_df)
 
 
