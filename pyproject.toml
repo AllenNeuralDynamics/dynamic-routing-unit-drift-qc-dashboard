@@ -5,7 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "altair>=5.5.0",
+    "altair<5.5.0",
     "ipykernel>=6.29.5",
     "jupyter-bokeh>=4.0.5",
     "npc-io>=0.1.32",
