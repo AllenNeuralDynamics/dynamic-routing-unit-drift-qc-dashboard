@@ -32,6 +32,9 @@ lda_df = pl.read_parquet(
 lda_all_df = pl.read_parquet(
     "//allen/programs/mindscope/workgroups/dynamicrouting/ben/lda_all.parquet"
 )
+lda_all_ks4_df = pl.read_parquet(
+    "//allen/programs/mindscope/workgroups/dynamicrouting/ben/lda_ks4.parquet"
+)
 anova_df = pl.read_parquet(
     "//allen/programs/mindscope/workgroups/dynamicrouting/ben/anova.parquet"
 )
