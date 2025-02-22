@@ -9,10 +9,11 @@
     - amplitude (larger = slightly more drift)
     - consistency of spike count over blocks, in baseline and in response
 
-- [ ] Describe the LDA classification metric
-
+- [x] Describe the LDA classification metric
+    - spike count in 3s from stim onset, Pearson corr with abs time of trial (https://codeocean.allenneuraldynamics.org/capsule/6421158/tree)
+    - leave-one-out cross-validation on 5000 annotated units (excl. unsure)
+    {'vis_response_r2': 1.438650980981107, 'aud_response_r2': 1.8042454303396904, 'presence_ratio': -1.511989383309867}
 - [x] Which brain areas have most drift? Directly assess with annotation, and also apply LDA to whole dataset.
-
 - [x] Which experiments have the most drift? Directly assess with annotation, and also apply LDA to whole dataset.
     - 715710_2024-07-17 the most 
 - [ ] Is KS4 better than KS25 regarding drift? 
@@ -42,12 +43,12 @@
 - [x] fix dashboard (5000 row limit)
 - [x] launch another KS4 session with high drift
     - 715710_2024-07-17 (finishes Friday afternoon)
-- [ ] get spike times parquet for KS4 sessions 
+- [x] get spike times parquet for KS4 sessions 
     - [x] get timing data from npc_sessions, adjust times in units table
-    - [ ] export data asset with three sessions
-- [ ] create extra metrics for KS4 sessions 
+    - [x] export data asset with three sessions
+- [x] create extra metrics for KS4 sessions 
     - [x] created branch
-    - [ ] waiting for export of data asset with third session parquet
-- [ ] make an annotation app for KS4 sessions
+    - [x] waiting for export of data asset with third session parquet
+- [x] make an annotation app for KS4 sessions
 - [ ] explore difficulty of getting spike amplitudes
 - [ ] what do false positives look like
