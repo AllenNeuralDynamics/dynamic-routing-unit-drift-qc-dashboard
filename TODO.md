@@ -12,14 +12,17 @@
 - [x] Describe the LDA classification metric
     - spike count in 3s from stim onset, Pearson corr with abs time of trial (https://codeocean.allenneuraldynamics.org/capsule/6421158/tree)
     - leave-one-out cross-validation on 5000 annotated units (excl. unsure)
-    {'vis_response_r2': 1.438650980981107, 'aud_response_r2': 1.8042454303396904, 'presence_ratio': -1.511989383309867}
+    {
+        'vis_response_r2': 1.438650980981107, 
+        'aud_response_r2': 1.8042454303396904, 
+        'presence_ratio': -1.511989383309867,
+    }
 - [x] Which brain areas have most drift? Directly assess with annotation, and also apply LDA to whole dataset.
 - [x] Which experiments have the most drift? Directly assess with annotation, and also apply LDA to whole dataset.
     - 715710_2024-07-17 the most 
 - [ ] Is KS4 better than KS25 regarding drift? 
     - need to actually annotate
 - [x] Do KS4 have a lower LDA metric on average?
-    - slightly, for one session
 
 ---
 @Corbett:
@@ -52,3 +55,5 @@
 - [x] make an annotation app for KS4 sessions
 - [ ] explore difficulty of getting spike amplitudes
 - [ ] what do false positives look like
+- [ ] compare ks2.5 vs ks4 after thresholding on presence ratio
+    - many more ks4 units with near-zero presence ratio
