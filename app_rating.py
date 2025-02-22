@@ -49,7 +49,7 @@ def display_metrics(
 
 
 def get_raster(unit_id: str) -> bytes:
-    filtered_df = db_utils.get_df(unit_id_filter=unit_id, with_paths=True)
+    filtered_df = db_utils.get_df(unit_id_filter=unit_id, with_paths=True, ks4_filter=None)
     assert len(filtered_df) == 1, "df filtering likely incorrect"
     path: str = filtered_df["path"].first()
     assert path is not None, f"Path not stored for {unit_id}"
@@ -63,7 +63,7 @@ def get_raster(unit_id: str) -> bytes:
 def display_rating(
     unit_id=str,
 ) -> pn.pane.Markdown:
-    df = db_utils.get_df(unit_id_filter=unit_id)
+    df = db_utils.get_df(unit_id_filter=unit_id, ks4_filter=None)
     assert len(df) == 1, f"Expected 1 row, got {len(df)}"
     row = df.to_dicts()[0]
     rating: int | None = row["drift_rating"]
@@ -81,7 +81,7 @@ def display_image(unit_id: str):
         sizing_mode="stretch_height",
     )
 
-
+# initialize for startup, then update as a global variable
 unit_id_generator = db_utils.unit_generator(
     already_checked=False,
     with_paths=True,
@@ -260,9 +260,12 @@ def update_unit_generator(event) -> None:
         session_id_filter=session_id_filter_text.value or None,
         with_paths=True,
         presence_ratio_filter=presence_ratio_range_slider.value,
+        ks4_filter=ks4_checkbox.value,
     )
     if drift_rating_filter_radio.value == "unrated":
         unit_generator_params["already_checked"] = False
+    elif drift_rating_filter_radio.value == "all":
+        unit_generator_params["already_checked"] = None
     else:
         unit_generator_params["drift_rating_filter"] = db_utils.UnitDriftRating[
             drift_rating_filter_radio.value.upper()
@@ -285,8 +288,9 @@ session_id_filter_text = pn.widgets.TextInput(
 session_id_filter_text.param.watch(update_unit_generator, "value")
 drift_rating_filter_radio = pn.widgets.RadioBoxGroup(
     name="Show rated units",
-    options=["unrated"] + [k.lower() for k in db_utils.UnitDriftRating.__members__],
+    options=["all", "unrated"] + [k.lower() for k in db_utils.UnitDriftRating.__members__],
     inline=False,
+    value="unrated",
 )
 drift_rating_filter_radio.param.watch(update_unit_generator, "value")
 presence_ratio_range_slider = pn.widgets.RangeSlider(
@@ -298,6 +302,9 @@ presence_ratio_range_slider = pn.widgets.RangeSlider(
     width=BUTTON_WIDTH,
 )
 presence_ratio_range_slider.param.watch(update_unit_generator, "value")
+
+ks4_checkbox = pn.widgets.Checkbox(name="Kilosort 4", value=False)
+ks4_checkbox.param.watch(update_unit_generator, "value")
 
 def app():
     sidebar = pn.Column(
@@ -313,6 +320,7 @@ def app():
         shortcuts_component,
         pn.layout.Divider(margin=(20, 0, 15, 0)),
         pn.pane.Markdown("### Filter units"),
+        ks4_checkbox,
         drift_rating_filter_radio,
         presence_ratio_range_slider,
         pn.pane.Markdown("""### Paste text only"""),
