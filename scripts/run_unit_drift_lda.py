@@ -88,7 +88,7 @@ print(df.describe())
 logger.info(f"Loaded data from parquet files in {time.time() - t0:.2f} seconds")
 
 t0 = time.time()
-METRICS_TO_KEEP = {'presence_ratio', 'vis_response_r2', 'aud_response_r2'} # , 'ancova_t_time', 'ancova_coef_time'
+METRICS_TO_KEEP = {'presence_ratio', 'vis_response_r2', 'aud_response_r2'} #, 'vis_baseline_r2', 'aud_baseline_r2'} # , 'ancova_t_time', 'ancova_coef_time'
 COLUMNS_TO_DROP = set(df.columns) - METRICS_TO_KEEP - {'unit_id', 'drift_rating'}
 
 annotated = (
@@ -151,6 +151,9 @@ all_units = (
 )
 ks4_units = (
     pl.read_parquet("//allen/programs/mindscope/workgroups/dynamicrouting/ben/corr_values_ks4.parquet")
+    .with_columns(
+        unit_id=pl.col('unit_id').str.replace('_ks4_', '_'),
+    )
     .join(
         other=(
             pl.scan_parquet("s3://aind-scratch-data/dynamic-routing/unit-rasters-ks4/units.parquet")
