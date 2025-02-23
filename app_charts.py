@@ -246,10 +246,10 @@ def get_roc_curve_df(metric: str, n_points=50) -> pl.DataFrame:
     NO = db_utils.UnitDriftRating.NO.name
     # only use the subset of the data where the metric overlaps between the two drift ratings
     metric_min = max(
-        [df.filter(pl.col("drift_rating") == x)[metric].min() for x in (YES, NO)]
+        [float(df.filter(pl.col("drift_rating") == x)[metric].min()) for x in (YES, NO)] # type: ignore[arg-type]
     )
     metric_max = min(
-        [df.filter(pl.col("drift_rating") == x)[metric].max() for x in (YES, NO)]
+        [float(df.filter(pl.col("drift_rating") == x)[metric].max()) for x in (YES, NO)] # type: ignore[arg-type]
     )
     values = np.linspace(metric_min, metric_max, n_points, endpoint=True)
     return pl.DataFrame(
@@ -294,9 +294,10 @@ def get_area_under_roc_curve(roc_df: pl.DataFrame) -> float:
     if fpr[-1] != 1.0:
         fpr = np.append(fpr, 1.0)
         tpr = np.append(tpr, 1.0)
-    auc = np.trapezoid(y=tpr, x=fpr)
+    auc = float(np.trapz(y=tpr, x=fpr)) # explicit casting for mypy
 
     return auc
+
 def get_roc_chart(roc_df: pl.DataFrame) -> alt.Chart:
     return (
         alt.Chart(
