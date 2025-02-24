@@ -343,24 +343,15 @@ metrics_dropdown_pn = pn.widgets.Select(
 
 outliers_df = unfiltered_df.join(filtered_df, on="unit_id", how="anti")
 
-df = db_utils.get_df()
 stats = pn.pane.DataFrame(
-    pl.DataFrame(
-        {
-            "unannotated": [df.filter(pl.col("drift_rating").is_null()).height],
-            "unsure": [
-                df.filter(
-                    pl.col("drift_rating") == db_utils.UnitDriftRating.UNSURE
-                ).height
-            ],
-            "no": [
-                df.filter(pl.col("drift_rating") == db_utils.UnitDriftRating.NO).height
-            ],
-            "yes": [
-                df.filter(pl.col("drift_rating") == db_utils.UnitDriftRating.YES).height
-            ],
-            "outliers": [len(unfiltered_df) - len(filtered_df)],
-        }
+    db_utils.get_df()
+    .with_columns(sorter=pl.when(pl.col('unit_id').str.ends_with('_ks4')).then(pl.lit('ks4')).otherwise(pl.lit('ks2.5')))
+    .group_by('sorter')
+    .agg(
+        unannotated=pl.col('drift_rating').is_null().sum(),
+        unsure=(pl.col('drift_rating') == db_utils.UnitDriftRating.UNSURE).sum(),
+        no=(pl.col('drift_rating') == db_utils.UnitDriftRating.NO).sum(),
+        yes=(pl.col('drift_rating') == db_utils.UnitDriftRating.YES).sum(),
     ).to_pandas(),
     index=False,
 )
