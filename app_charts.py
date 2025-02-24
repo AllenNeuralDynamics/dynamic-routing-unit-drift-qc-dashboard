@@ -43,7 +43,7 @@ ancova_df = pl.read_parquet(
 )
 
 unfiltered_df = (
-    db_utils.get_df()
+    db_utils.get_df(ks4_filter=False)
     .drop_nulls("drift_rating")
     # replace drift rating numbers with names
     .filter(pl.col("drift_rating") != db_utils.UnitDriftRating.UNSURE)

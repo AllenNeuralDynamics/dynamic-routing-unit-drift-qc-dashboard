@@ -203,7 +203,7 @@ def get_df(
     session_id_filter: str | None = None,
     drift_rating_filter: int | None = None,
     with_paths: bool | None = True,
-    ks4_filter: bool | None = False,
+    ks4_filter: bool | None = None,
     db_path=DB_PATH,
 ) -> pl.DataFrame:
     filter_exprs = []
@@ -322,4 +322,4 @@ def test_db(with_paths=False):
 
 if __name__ == "__main__":
     update_db()
-    print(get_df(ks4_filter=None).drop_nulls('path'))
+    print(get_df(ks4_filter=True).drop_nulls('path'))

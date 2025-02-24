@@ -49,7 +49,7 @@ def display_metrics(
 
 
 def get_raster(unit_id: str) -> bytes:
-    filtered_df = db_utils.get_df(unit_id_filter=unit_id, with_paths=True, ks4_filter=None)
+    filtered_df = db_utils.get_df(unit_id_filter=unit_id, with_paths=True)
     assert len(filtered_df) == 1, "df filtering likely incorrect"
     path: str = filtered_df["path"].first()
     assert path is not None, f"Path not stored for {unit_id}"
@@ -63,7 +63,7 @@ def get_raster(unit_id: str) -> bytes:
 def display_rating(
     unit_id=str,
 ) -> pn.pane.Markdown:
-    df = db_utils.get_df(unit_id_filter=unit_id, ks4_filter=None)
+    df = db_utils.get_df(unit_id_filter=unit_id)
     assert len(df) == 1, f"Expected 1 row, got {len(df)}"
     row = df.to_dicts()[0]
     rating: int | None = row["drift_rating"]
