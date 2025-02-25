@@ -19,6 +19,7 @@ def load_annotation_and_metrics_df() -> pl.DataFrame:
     df = (
         pl.scan_parquet("//allen/programs/mindscope/workgroups/dynamicrouting/ben/unit_drift.parquet")
         .select('unit_id', 'drift_rating')
+        .filter(pl.col('unit_id').str.ends_with('_ks4').not_())
         .with_columns(
             session_id=pl.col('unit_id').str.split('_').list.slice(0, 2).list.join('_'),
         )
