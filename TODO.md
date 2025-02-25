@@ -53,7 +53,18 @@
     - [x] created branch
     - [x] waiting for export of data asset with third session parquet
 - [x] make an annotation app for KS4 sessions
-- [ ] explore difficulty of getting spike amplitudes
-- [ ] what do false positives look like
-- [ ] compare ks2.5 vs ks4 after thresholding on presence ratio
+- [-] explore difficulty of getting spike amplitudes
+    - not in sorted NWB or npc_ephys
+    - would take some work to access 
+- [x] what do false positives look like
+    - get annotated units df, joined with LDA scores
+    - make unit generator
+        - filter on rating
+        - filter on TP/FP/TN/FN
+        - display LDA score 
+        - display annotation and prediction at current LDA threshold
+    - [x] fix sort/random with toggle
+- [x] compare ks2.5 vs ks4 after thresholding on presence ratio
     - many more ks4 units with near-zero presence ratio
+- [x] number of units in ks4 after filtering presence ratio vs ks2.5
+- [x] plot of trial spike counts over trials for one session 
