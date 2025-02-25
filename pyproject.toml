@@ -8,6 +8,7 @@ dependencies = [
     "altair<5.5.0",
     "ipykernel>=6.29.5",
     "jupyter-bokeh>=4.0.5",
+    "npc-ccf-utils",
     "npc-io>=0.1.32",
     "panel>=1.6.0",
     "polars[all]>=1.21.0",
@@ -15,3 +16,6 @@ dependencies = [
     "seaborn>=0.13.2",
     "vl-convert-python>=1.7.0",
 ]
+
+[tool.uv.sources]
+npc-ccf-utils = { git = "https://github.com/bjhardcastle/npc_ccf_utils" }
