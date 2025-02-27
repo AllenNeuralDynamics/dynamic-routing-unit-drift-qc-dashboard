@@ -182,6 +182,12 @@ def main():
         .drop_nulls()
     )
     for filename_suffix, units_df in {'all': all_units, 'ks4': ks4_units}.items():
+        if len(units_df) == 0:
+            logger.warning(f"No {filename_suffix} units found")
+            continue
+        if METRICS_TO_KEEP - set(units_df.columns):
+            logger.warning(f"Missing metrics for {filename_suffix} units: {METRICS_TO_KEEP - set(units_df.columns)}")
+            continue
         logger.info(f"Applying LDA score to {filename_suffix} units")
         scores = lda.transform(get_x(units_df)).squeeze()
         assert scores.ndim == 1
