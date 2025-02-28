@@ -1,4 +1,5 @@
 import functools
+import json
 import logging
 import pathlib
 import time
@@ -6,8 +7,8 @@ from typing import Iterable
 
 import numpy.typing as npt
 import polars as pl
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 import tqdm
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
 logger = logging.getLogger(pathlib.Path(__file__).stem)
 logging.basicConfig(level=logging.INFO)
@@ -64,6 +65,14 @@ def load_annotation_and_metrics_df() -> pl.DataFrame:
         #     on='unit_id',
         #     how='left',
         # )
+        # get ks_test metrics ------------------------------------------------ #
+        .join(
+            other=(
+                pl.scan_parquet("//allen/programs/mindscope/workgroups/dynamicrouting/ben/ks_test.parquet")
+            ),
+            on='unit_id',
+            how='left',
+        )
         # get trial metadata ----------------------------------------------- #
         # .join(
         #     other=(
@@ -127,7 +136,7 @@ def main():
     df = load_annotation_and_metrics_df()
     t0 = time.time()
 
-    METRICS_TO_KEEP = {'presence_ratio', 'vis_response_r2', 'aud_response_r2'} #, 'vis_baseline_r2', 'aud_baseline_r2'} # , 'ancova_t_time', 'ancova_coef_time'
+    METRICS_TO_KEEP = {'presence_ratio', 'vis_response_r2', 'aud_response_r2', 'ks_D_max_trial', 'ks_D_max_baseline', 'ks_D_max_response'} #, 'vis_baseline_r2', 'aud_baseline_r2'} # , 'ancova_t_time', 'ancova_coef_time'
     COLUMNS_TO_DROP = set(df.columns) - METRICS_TO_KEEP - {'unit_id', 'drift_rating'}
 
     annotated = (
@@ -149,13 +158,15 @@ def main():
         annotated
         .join(pl.DataFrame({'unit_id': unit_id_to_value.keys(), 'lda': unit_id_to_value.values()}), on='unit_id', how='inner')  
     )
-    logger.info(f"Writing LDA results for annotated units to parquet")
+    logger.info("Writing LDA results for annotated units to parquet")
     lda_df.write_parquet("//allen/programs/mindscope/workgroups/dynamicrouting/ben/lda.parquet")
     print(lda_df.describe())
 
     logger.info("Applying LDA score to un-annotated units")
     lda.fit(*get_x_y(annotated)) # re-fit on all annotated units
-    print(dict(zip(train.drop('unit_id', 'drift_rating').columns, [float(x) for x in lda.coef_.squeeze()])))
+    coefs = dict(zip(train.drop('unit_id', 'drift_rating').columns, [float(x) for x in lda.coef_.squeeze()]))
+    pathlib.Path("lda_coeff.json").write_text(json.dumps(coefs, indent=4))
+    print(coefs)
     all_units = (
         df
         .unique('unit_id')

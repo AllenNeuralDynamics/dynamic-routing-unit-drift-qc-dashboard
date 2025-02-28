@@ -1,5 +1,8 @@
 {
-    "vis_response_r2": 1.438650980981107,
-    "aud_response_r2": 1.8042454303396904,
-    "presence_ratio": -1.511989383309867
+    "vis_response_r2": 0.038212149911041826,
+    "aud_response_r2": 0.7042488233885934,
+    "presence_ratio": -0.7386960800751848,
+    "ks_D_max_trial": -1.7619842050943655,
+    "ks_D_max_baseline": 1.2160678745208857,
+    "ks_D_max_response": 4.006114024542267
 }
