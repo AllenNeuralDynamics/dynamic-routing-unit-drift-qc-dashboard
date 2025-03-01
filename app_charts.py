@@ -173,6 +173,7 @@ def get_histogram_chart(
     df: pl.DataFrame, metric: str, title: str | None = None
 ) -> alt.Chart:
     # alt.Chart(df.to_pandas())
+    df = df.fill_nan(None).drop_nulls(metric)	
     return (
         alt.Chart(
             data=(
@@ -193,10 +194,7 @@ def get_histogram_chart(
         # .transform_filter(
         #     alt.FieldLTEPredicate('metric', alt.expr.quantileUniform(0.9))
         # )
-        .mark_bar(
-            opacity=0.8,
-            binSpacing=0,
-        )
+        .mark_line(interpolate='step-after')
         .encode(
             alt.X(f"{metric}:Q", bin=alt.Bin(maxbins=50), title=f"{metric} value"),
             alt.Y("count()", title="count"),
