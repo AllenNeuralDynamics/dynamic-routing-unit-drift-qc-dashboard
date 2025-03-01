@@ -44,6 +44,12 @@ ancova_df = pl.read_parquet(
 ks_test_df = pl.read_parquet(
     "//allen/programs/mindscope/workgroups/dynamicrouting/ben/ks_test.parquet"
 )
+kw_test_df = pl.read_parquet(
+    "//allen/programs/mindscope/workgroups/dynamicrouting/ben/kw_test.parquet"
+)
+med_test_df = pl.read_parquet(
+    "//allen/programs/mindscope/workgroups/dynamicrouting/ben/med_test.parquet"
+)
 
 unfiltered_df = (
     db_utils.get_df(ks4_filter=False)
@@ -99,6 +105,16 @@ unfiltered_df = (
     )
     .join(
         other=ks_test_df.drop_nulls().drop_nans(),
+        on="unit_id",
+        how="left",
+    )
+    .join(
+        other=kw_test_df.drop_nulls().drop_nans(),
+        on="unit_id",
+        how="left",
+    )
+    .join(
+        other=med_test_df.drop_nulls().drop_nans(),
         on="unit_id",
         how="left",
     )
