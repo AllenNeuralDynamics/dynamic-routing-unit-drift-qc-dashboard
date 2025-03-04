@@ -50,6 +50,9 @@ kw_test_df = pl.read_parquet(
 med_test_df = pl.read_parquet(
     "//allen/programs/mindscope/workgroups/dynamicrouting/ben/med_test.parquet"
 )
+ad_test_df = pl.read_parquet(
+    "//allen/programs/mindscope/workgroups/dynamicrouting/ben/ad_test.parquet"
+)
 
 unfiltered_df = (
     db_utils.get_df(ks4_filter=False)
@@ -115,6 +118,11 @@ unfiltered_df = (
     )
     .join(
         other=med_test_df.drop_nulls().drop_nans(),
+        on="unit_id",
+        how="left",
+    )
+    .join(
+        other=ad_test_df.drop_nulls().drop_nans(),
         on="unit_id",
         how="left",
     )
