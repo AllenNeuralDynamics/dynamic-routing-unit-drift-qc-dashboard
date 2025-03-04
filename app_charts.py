@@ -262,7 +262,7 @@ def get_cum_dist_chart(df: pl.DataFrame, metric: str) -> alt.Chart:
     return chart #+ points  + rules
 
 
-def get_roc_curve_df(metric: str, n_points=50) -> pl.DataFrame:
+def get_roc_curve_df(metric: str, n_points=50, logspace=False, below_threshold=False) -> pl.DataFrame:
     df = unfiltered_df
     YES = db_utils.UnitDriftRating.YES.name
     NO = db_utils.UnitDriftRating.NO.name
