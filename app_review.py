@@ -3,6 +3,7 @@ import random
 import time
 from typing import Generator, NotRequired, TypedDict
 
+import numpy as np
 import panel as pn
 import param
 import polars as pl
@@ -12,9 +13,9 @@ from panel.custom import ReactComponent
 import db_utils
 
 try:
-    import app_charts
+    pass
 except ImportError:
-    import unit_drift_charts as app_charts # filenames are different on vm
+    pass  # filenames are different on vm
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)  #! doesn't take effect
@@ -58,6 +59,7 @@ units_df: None | pl.DataFrame = (
     )
     .filter(pl.col("lda").fill_nan(None).is_not_null())
 )
+
 
 def get_metrics(unit_id: str):
     return units_df.filter(pl.col("unit_id") == unit_id).to_dicts()[0]
@@ -115,7 +117,7 @@ def get_df(
     if classification_filter and classification_filter not in ("all", "none"):
         lda_threshold = fpr_to_classifier_info(fpr_slider.value)["lda_threshold"]
         if classification_filter == "yes":
-            filter_exprs.append(pl.col("lda") > lda_threshold)
+            filter_exprs.append(pl.col("lda") >= lda_threshold)
         elif classification_filter == "no":
             filter_exprs.append(pl.col("lda") < lda_threshold)
 
@@ -414,9 +416,83 @@ fpr_slider = pn.widgets.FloatSlider(
 )
 
 
+def get_roc_curve_df(
+    metric: str, n_points=50, logspace=False, below_threshold=False
+) -> pl.DataFrame:
+    df = units_df
+    YES = db_utils.UnitDriftRating.YES.value
+    NO = db_utils.UnitDriftRating.NO.value
+    # only use the subset of the data where the metric overlaps between the two drift ratings
+    metric_min = max(
+        [float(df.filter(pl.col("drift_rating") == x)[metric].min()) for x in (YES, NO)]  # type: ignore[arg-type]
+    )
+    metric_max = min(
+        [float(df.filter(pl.col("drift_rating") == x)[metric].max()) for x in (YES, NO)]  # type: ignore[arg-type]
+    )
+    if logspace:
+        values = np.logspace(
+            np.log10(metric_min), np.log10(metric_max), n_points, endpoint=True
+        )
+    else:
+        values = np.linspace(metric_min, metric_max, n_points, endpoint=True)
+    return pl.DataFrame(
+        {
+            "value": values,
+            "tp": [
+                df.filter(
+                    (pl.col("drift_rating") == YES)
+                    & (
+                        pl.col(metric).le(v)
+                        if below_threshold
+                        else pl.col(metric).ge(v)
+                    )
+                ).height
+                for v in values
+            ],
+            "fp": [
+                df.filter(
+                    (pl.col("drift_rating") == NO)
+                    & (
+                        pl.col(metric).le(v)
+                        if below_threshold
+                        else pl.col(metric).ge(v)
+                    )
+                ).height
+                for v in values
+            ],
+            "tn": [
+                df.filter(
+                    (pl.col("drift_rating") == NO)
+                    & (
+                        pl.col(metric).gt(v)
+                        if below_threshold
+                        else pl.col(metric).lt(v)
+                    )
+                ).height
+                for v in values
+            ],
+            "fn": [
+                df.filter(
+                    (pl.col("drift_rating") == YES)
+                    & (
+                        pl.col(metric).gt(v)
+                        if below_threshold
+                        else pl.col(metric).lt(v)
+                    )
+                ).height
+                for v in values
+            ],
+        }
+    ).with_columns(
+        fpr=pl.col("fp") / (pl.col("fp") + pl.col("tn")),
+        tpr=pl.col("tp") / (pl.col("tp") + pl.col("fn")),
+        metric=pl.lit(metric),
+    )
+
+
 def fpr_to_classifier_info(fpr_threshold: float) -> dict:
     return (
-        app_charts.get_roc_curve_df(metric="lda")
+        get_roc_curve_df(metric="lda")
         .select(pl.col("value").sort_by((pl.col("fpr") - fpr_threshold).abs()))
         .rename({"value": "lda_threshold"})
         .to_dicts()[0]
