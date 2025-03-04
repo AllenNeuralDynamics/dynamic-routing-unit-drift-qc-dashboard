@@ -273,26 +273,29 @@ def get_roc_curve_df(metric: str, n_points=50) -> pl.DataFrame:
     metric_max = min(
         [float(df.filter(pl.col("drift_rating") == x)[metric].max()) for x in (YES, NO)] # type: ignore[arg-type]
     )
-    values = np.linspace(metric_min, metric_max, n_points, endpoint=True)
+    if logspace:
+        values = np.logspace(np.log10(metric_min), np.log10(metric_max), n_points, endpoint=True)
+    else:
+        values = np.linspace(metric_min, metric_max, n_points, endpoint=True)
     return pl.DataFrame(
         {
             "value": values,
             "tp": [
                 df.filter(
-                    (pl.col("drift_rating") == YES) & (pl.col(metric) >= v)
+                    (pl.col("drift_rating") == YES) & (pl.col(metric).le(v) if below_threshold else pl.col(metric).ge(v))
                 ).height
                 for v in values
             ],
             "fp": [
-                df.filter((pl.col("drift_rating") == NO) & (pl.col(metric) >= v)).height
+                df.filter((pl.col("drift_rating") == NO) & (pl.col(metric).le(v) if below_threshold else  pl.col(metric).ge(v))).height
                 for v in values
             ],
             "tn": [
-                df.filter((pl.col("drift_rating") == NO) & (pl.col(metric) < v)).height
+                df.filter((pl.col("drift_rating") == NO) & (pl.col(metric).gt(v) if below_threshold else pl.col(metric).lt(v))).height
                 for v in values
             ],
             "fn": [
-                df.filter((pl.col("drift_rating") == YES) & (pl.col(metric) < v)).height
+                df.filter((pl.col("drift_rating") == YES) & (pl.col(metric).gt(v) if below_threshold else pl.col(metric).lt(v))).height
                 for v in values
             ],
         }
@@ -360,7 +363,7 @@ def get_roc_chart(roc_df: pl.DataFrame) -> alt.Chart:
 
 
 metrics_dropdown_pn = pn.widgets.Select(
-    name="metric", options=metric_columns, value="lda"
+    name="metric", options=metric_columns, value="ks_D_max_response"
 )
 
 outliers_df = unfiltered_df.join(filtered_df, on="unit_id", how="anti")
@@ -411,7 +414,8 @@ timeline = pn.pane.Vega(
 
 # roc_chart = get_roc_chart(pl.read_parquet(ROC_DF_PATH))
 def get_roc_chart_pn(metric: str) -> alt.Chart:
-    roc_df = get_roc_curve_df(metric)
+    is_p_value = '_p_' in metric
+    roc_df = get_roc_curve_df(metric, logspace=is_p_value, below_threshold=(is_p_value or 'presence_ratio' in metric))
     return get_roc_chart(roc_df)
 
 
