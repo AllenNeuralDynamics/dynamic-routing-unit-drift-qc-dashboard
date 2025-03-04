@@ -73,6 +73,20 @@ def load_annotation_and_metrics_df() -> pl.DataFrame:
             on='unit_id',
             how='left',
         )
+        .join(
+            other=(
+                pl.scan_parquet("//allen/programs/mindscope/workgroups/dynamicrouting/ben/kw_test.parquet")
+            ),
+            on='unit_id',
+            how='left',
+        )
+        .join(
+            other=(
+                pl.scan_parquet("//allen/programs/mindscope/workgroups/dynamicrouting/ben/med_test.parquet")
+            ),
+            on='unit_id',
+            how='left',
+        )
         # get trial metadata ----------------------------------------------- #
         # .join(
         #     other=(
@@ -136,7 +150,8 @@ def main():
     df = load_annotation_and_metrics_df()
     t0 = time.time()
 
-    METRICS_TO_KEEP = {'presence_ratio', 'vis_response_r2', 'aud_response_r2', 'ks_D_max_trial', 'ks_D_max_baseline', 'ks_D_max_response'} #, 'vis_baseline_r2', 'aud_baseline_r2'} # , 'ancova_t_time', 'ancova_coef_time'
+    METRICS_TO_KEEP = {'presence_ratio', 'vis_response_r2', 'aud_response_r2',  'ks_D_max_baseline', 'ks_D_max_response'} #, 'vis_baseline_r2', 'aud_baseline_r2'} # , 'ancova_t_time', 'ancova_coef_time'
+    METRICS_TO_KEEP = {'kw_F_max_response', 'ks_D_max_response', 'med_D_max_response'} #, 'vis_baseline_r2', 'aud_baseline_r2'} # , 'ancova_t_time', 'ancova_coef_time'
     COLUMNS_TO_DROP = set(df.columns) - METRICS_TO_KEEP - {'unit_id', 'drift_rating'}
 
     annotated = (
