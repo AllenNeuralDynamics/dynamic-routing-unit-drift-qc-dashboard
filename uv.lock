@@ -665,18 +665,19 @@ wheels = [
 
 [[package]]
 name = "deltalake"
-version = "0.25.1"
+version = "0.25.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pyarrow" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/95/de/63593a6ce98fe759824bb4fe67748aa44f5d78979849faaf572ef289e756/deltalake-0.25.1.tar.gz", hash = "sha256:85be32e9c70161ac2e1b72f7de97183a0d13cbb90157da52cb4a749c9d041f20", size = 4968547 }
+sdist = { url = "https://files.pythonhosted.org/packages/02/43/cd2ac627e013696f7ee4ece063457a4dafd11faca27703448a4e05e74152/deltalake-0.25.2.tar.gz", hash = "sha256:117d73f6cd4b57f9889836a73bad1902f25f2752bf6374a6136641b365db566c", size = 4972714 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0d/d4/7b4c42c8ae274643a395ebd1f992229de37ea89da4c34f6ab15b230c55f4/deltalake-0.25.1-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:1b6592942955a03226525cd65e3bc6d32d7a5a4b7982407c1089fc94860c18d8", size = 41567313 },
-    { url = "https://files.pythonhosted.org/packages/df/6c/4aa2de9ee4dba0de2ed4b9d6e5f6d831e2220452b6abf9af5ba08d420828/deltalake-0.25.1-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:d4c4d479c67928c28309e1eb202ef0595e8c7136da8bacc3e40ec7f50eb131d1", size = 39147093 },
-    { url = "https://files.pythonhosted.org/packages/1e/bc/8c7d3ceaceb050f3a276e2e434a66f803d655b0fa8020d20e89df16c6029/deltalake-0.25.1-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a9f91cec1e111146a9e2f7699f73b6fff56779fff5f92dbea461f875ec43a50b", size = 34995585 },
-    { url = "https://files.pythonhosted.org/packages/3d/83/71a36801c9a7f01eb65834a21832a2f520783a5c649af5d132fe4bb16b21/deltalake-0.25.1-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d98906da8414bdc3b1aa9c54178304d2cc3f084f45e9f913f8f0d04254ad31b5", size = 44304674 },
-    { url = "https://files.pythonhosted.org/packages/fb/f6/4a222c809ed64c6bdfd0c0ee062c42e0fca884c8aec4a5db28fa5821544a/deltalake-0.25.1-cp39-abi3-win_amd64.whl", hash = "sha256:a0e1d8a1f800be1a7a62fc3e806d0ac4a9c75923ddf5c6d2ca40b8f51531ce58", size = 37443550 },
+    { url = "https://files.pythonhosted.org/packages/77/03/e610f72e23405977a9abd6bea6cd67ab088a95ee32379cc5dc931471db23/deltalake-0.25.2-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:a3978c3e68d2e08c29e803421da48a16b3fe136d1f0192bbe4a9d0515caa313c", size = 41727253 },
+    { url = "https://files.pythonhosted.org/packages/d5/86/3744ef49b9f9415b9303d6ace61f2043c99a4bff30e71c3eeb56e73fc2a2/deltalake-0.25.2-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:cfea76203cb320d11b2807222b00c410bc9beca448d20037b3852bdc35bebe62", size = 39107169 },
+    { url = "https://files.pythonhosted.org/packages/98/48/0445fc2556e67402f93f1e50133b5335c850bd22ab20e0ef9e190c903545/deltalake-0.25.2-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:1f8a8048b13e461dbcd98e2b8c3f0a6d6a27c0603df952a5f546dc9c0ca88cc5", size = 35029527 },
+    { url = "https://files.pythonhosted.org/packages/06/4d/6896615e25d7dae7ff93ed33c97c7ee0b92111c804862880f87902c99c52/deltalake-0.25.2-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9188e145553fa7e066c2b13213fbf17688da2c2d01e296b0d81ea934cc8b67da", size = 44336158 },
+    { url = "https://files.pythonhosted.org/packages/a4/5b/a29be3f1b0388fa18f3af6a7f6f60e77c7002e55a1331bd358b37dc93c7c/deltalake-0.25.2-cp39-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:a1797ebb6fb92b9970d951e53eb93dc49849e744d06e2b7fb27008e3fca1b8a2", size = 35040976 },
+    { url = "https://files.pythonhosted.org/packages/9d/ed/770d6293361753934c108fd9cf195a1d84143184c7fafcc9927c12b405b8/deltalake-0.25.2-cp39-abi3-win_amd64.whl", hash = "sha256:4218c00bd9b6b69a93847afe2084532b998fdb171c205e014b0e7d7c4c7f84f6", size = 37576600 },
 ]
 
 [[package]]
@@ -711,18 +712,18 @@ wheels = [
 
 [[package]]
 name = "fastexcel"
-version = "0.12.1"
+version = "0.13.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pyarrow" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/93/bf/1876776d424bbcb069520710df4b930adfe998eaa0bb4a88988254ffa8e7/fastexcel-0.12.1.tar.gz", hash = "sha256:5dc2f1ff3ddff6c933d1f924add7f7f5dc20388c1e70b22afae0f28b3c4f01c9", size = 38264 }
+sdist = { url = "https://files.pythonhosted.org/packages/4f/56/995cd13b28256fbd8a4df4e624273c583a01b980ea17eeca58d35e50c44f/fastexcel-0.13.0.tar.gz", hash = "sha256:308112093a73fb5a1f1e1619df55b72c882ef26234de2e2b8bd76d1781c335e1", size = 39493 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/64/a8/e39f5c609deaf1754b520e75231368b373c4e6a62dfc6e8d283918aa2284/fastexcel-0.12.1-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:7c4c959a49329a53540ed86d4f92cd4af2d774b08c47ad190841e4daf042758a", size = 1174326 },
-    { url = "https://files.pythonhosted.org/packages/b5/d7/1ff26ec00aac2623a87e9397c252f515f45ed28425007c1b895f1810fd5a/fastexcel-0.12.1-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:e889290b2d1437e57c4fb500657f0d2908de6aa5b291475b93e3b5d7e0cea938", size = 1141937 },
-    { url = "https://files.pythonhosted.org/packages/9d/56/f4967db7c848e191d633366fe4876af74e656e809c9719c1a7489b50349d/fastexcel-0.12.1-cp38-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c09119f14760dfee0c1cb94ef281bee2abb844975fdf0fbf34c5b836ff58d39d", size = 1288445 },
-    { url = "https://files.pythonhosted.org/packages/50/0d/c2e61c3b30d2cbd083cb010346745edc8e6ade3401b1f9d7f083aaff051e/fastexcel-0.12.1-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a169b72df88406007d8449a4b216effddeaad5e9d73f4de1fbd8cbfd6ce6a01c", size = 1309212 },
-    { url = "https://files.pythonhosted.org/packages/85/13/6662e60e76e878e2251ca78d7f6630103a8e998f9ca1fa7154f94845425f/fastexcel-0.12.1-cp38-abi3-win_amd64.whl", hash = "sha256:5c1868546ae0912040449e0b26dd4759db3f76a94e0fa5ac3c86fdaf54185e9c", size = 1017083 },
+    { url = "https://files.pythonhosted.org/packages/cc/21/42772117d20326416f8b85f9a78bf9e5c9dc4cbb28efe3c879814f271621/fastexcel-0.13.0-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:709f44440312ecd909856f9335d8224c1f3d57ea50a136ec5f88fab86fc153d7", size = 1249554 },
+    { url = "https://files.pythonhosted.org/packages/8e/fe/1a7e084b2b59cd5ca4d2e196750f080280c59924f05be8caad2a8e973147/fastexcel-0.13.0-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:40978c1aae4888db105332caac8bef9492953ffe8fd4f195e306d8a11464e5a6", size = 1209747 },
+    { url = "https://files.pythonhosted.org/packages/2c/fa/18f68e941c9080af6d26468855c09a4d16eff82218c1b9351f46e8161356/fastexcel-0.13.0-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:eeff6ab300b8affd9b59acc55af53c72f53c7d8cd28d2cd7071dd046d15dd34c", size = 1320498 },
+    { url = "https://files.pythonhosted.org/packages/4d/32/53022ddc3b9cde8bd021c89290a3365c06223c988b7a51fb21a7dbafb6f9/fastexcel-0.13.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d92bc6e8caa6685f2901b2efe173a5cc6e975b62bfc555844373415aee5a255a", size = 1347255 },
+    { url = "https://files.pythonhosted.org/packages/c7/01/4900aabbe4a485a1c3e8ce98473cc3f00d486b47a7b1c10b69d13b9d4f4e/fastexcel-0.13.0-cp39-abi3-win_amd64.whl", hash = "sha256:10297f6c8146691e9d0e6b22bc1b47bae49a522a8edd3150f19b4d5d3eef2a01", size = 1055719 },
 ]
 
 [[package]]
@@ -2601,11 +2602,11 @@ wheels = [
 
 [[package]]
 name = "setuptools"
-version = "75.8.0"
+version = "75.8.2"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/92/ec/089608b791d210aec4e7f97488e67ab0d33add3efccb83a056cbafe3a2a6/setuptools-75.8.0.tar.gz", hash = "sha256:c5afc8f407c626b8313a86e10311dd3f661c6cd9c09d4bf8c15c0e11f9f2b0e6", size = 1343222 }
+sdist = { url = "https://files.pythonhosted.org/packages/d1/53/43d99d7687e8cdef5ab5f9ec5eaf2c0423c2b35133a2b7e7bc276fc32b21/setuptools-75.8.2.tar.gz", hash = "sha256:4880473a969e5f23f2a2be3646b2dfd84af9028716d398e46192f84bc36900d2", size = 1344083 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/69/8a/b9dc7678803429e4a3bc9ba462fa3dd9066824d3c607490235c6a796be5a/setuptools-75.8.0-py3-none-any.whl", hash = "sha256:e3982f444617239225d675215d51f6ba05f845d4eec313da4418fdbb56fb27e3", size = 1228782 },
+    { url = "https://files.pythonhosted.org/packages/a9/38/7d7362e031bd6dc121e5081d8cb6aa6f6fedf2b67bf889962134c6da4705/setuptools-75.8.2-py3-none-any.whl", hash = "sha256:558e47c15f1811c1fa7adbd0096669bf76c1d3f433f58324df69f3f5ecac4e8f", size = 1229385 },
 ]
 
 [[package]]
@@ -2827,7 +2828,7 @@ requires-dist = [
     { name = "npc-ccf-utils", git = "https://github.com/bjhardcastle/npc_ccf_utils" },
     { name = "npc-io", specifier = ">=0.1.32" },
     { name = "panel", specifier = ">=1.6.0" },
-    { name = "polars", extras = ["all"], specifier = ">=1.21.0" },
+    { name = "polars", extras = ["all"], specifier = ">=1.23.0" },
     { name = "scikit-learn", specifier = ">=1.6.1" },
     { name = "seaborn", specifier = ">=0.13.2" },
     { name = "vl-convert-python", specifier = ">=1.7.0" },

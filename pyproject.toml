@@ -11,7 +11,7 @@ dependencies = [
     "npc-ccf-utils",
     "npc-io>=0.1.32",
     "panel>=1.6.0",
-    "polars[all]>=1.21.0",
+    "polars[all]>=1.23.0",
     "scikit-learn>=1.6.1",
     "seaborn>=0.13.2",
     "vl-convert-python>=1.7.0",
